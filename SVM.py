@@ -1,0 +1,55 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import LabelEncoder
+from imblearn.over_sampling import SMOTE
+from sklearn import svm
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import  accuracy_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+
+
+# Load and preprocess the dataset
+preprocessed_data = pd.read_csv('Dataset/test.csv')
+
+# Handle NaN values in target variables
+imputer = SimpleImputer(strategy='median')
+preprocessed_data['score'] = imputer.fit_transform(preprocessed_data[['score']])
+
+
+# Identify non-numeric features and encode or drop them
+non_numeric_columns = preprocessed_data.select_dtypes(include=['object']).columns
+label_encoder = LabelEncoder()
+for column in non_numeric_columns:
+    preprocessed_data[column] = label_encoder.fit_transform(preprocessed_data[column])
+
+# Splitting the dataset
+X = preprocessed_data.drop(['views', 'likes', 'comments_count', 'score'], axis=1)
+y = preprocessed_data[['score']]
+
+oversample = SMOTE()
+X, y = oversample.fit_resample(X, y)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Initialize and train the different classifiers; one with Polynomial kernel, and another one with RBF kernel models
+rbf = svm.SVC(kernel='rbf', gamma=0.5, C=0.1).fit(X_train, y_train)
+poly = svm.SVC(kernel='poly', degree=3, C=1).fit(X_train, y_train)
+
+
+# Make predictions
+poly_pred = poly.predict(X_test)
+rbf_pred = rbf.predict(X_test)
+
+# accuracy and f1 scores for SVM
+poly_accuracy = accuracy_score(y_test, poly_pred)
+poly_f1 = f1_score(y_test, poly_pred, average='weighted')
+print('Accuracy (Polynomial Kernel): ', "%.2f" % (poly_accuracy*100))
+print('F1 (Polynomial Kernel): ', "%.2f" % (poly_f1*100))
+
+rbf_accuracy = accuracy_score(y_test, rbf_pred)
+rbf_f1 = f1_score(y_test, rbf_pred, average='weighted')
+print('Accuracy (rbf Kernel): ', "%.2f" % (rbf_accuracy*100))
+print('F1 (rbf Kernel): ', "%.2f" % (rbf_f1*100))
+
